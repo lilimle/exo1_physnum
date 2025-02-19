@@ -13,7 +13,7 @@ using namespace std; // ouvrir un namespace avec la librerie c++ de base
    les methodes de base pour lire / initialiser les inputs, 
    preparer les outputs et calculer les donnees necessaires
 */
-class Engine
+class Engines
 {
 private:
 
