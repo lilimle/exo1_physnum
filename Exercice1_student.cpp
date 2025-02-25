@@ -51,7 +51,7 @@ double dist_s_l;     // Distance satellite-Lune
   void printOut(bool write)
   {
   // TODO calculer l'energie mecanique
-    double Energy =  0;
+    double Energy =  0.5*(y[0]*y[0] + y[1]*y[1]) - 0.5*G_grav*(mt/dist_s_t + ml/dist_s_l) + 0.5*Om*Om*(y[2]*y[2] + y[3]*y[3]);
 
     // Ecriture tous les [sampling] pas de temps, sauf si write est vrai
     if((!write && last>=sampling) || (write && last!=1))
@@ -68,10 +68,10 @@ double dist_s_l;     // Distance satellite-Lune
 
     void compute_f(valarray<double>& f) //  TODO: Calcule le tableau de fonctions f(y)
     {
-      f[0]      = 0;
-      f[1]      = 0;
-      f[2]      = 0; 
-      f[3]      = 0; 
+      f[0]      = -G_grav*(mt/(pow(dist_s_t,3))*(y[2]-xt) + ml/(dist_s_l**3)*(y[2]-xl)) + 2*Om*y[1] + Om*Om*y[2];
+      f[1]      = -G_grav*(y[3])*(mt/(pow(dist_s_t,3) + ml/pow(dist_s_l,3))) + 2*Om*y[0] + Om*Om*y[3];;
+      f[2]      = y[0]; 
+      f[3]      = y[1]; 
     }
 
     // New step method from EngineEuler
@@ -87,22 +87,53 @@ double dist_s_l;     // Distance satellite-Lune
       //TODO : écrire un algorithme valide pour chaque alpha dans [0,1]
       // tel que alpha=1 correspond à Euler explicite et alpha=0 à Euler implicite 
       // et alpha=0.5 à Euler semi-implicite
+
       if(alpha >= 0. && alpha <= 1.0){
         t += dt;                 //mise à jour du temps 
+        if (alpha == 1.0) {  
+          // Explicit Euler: straightforward computation
+          compute_f(f);
+          y += dt * f;
+      } 
+      else if (alpha == 0.0) {  
+        // Implicit Euler requires an iterative solution
+        while (error > tol && iteration <= maxit) {
+            yold = y;  // Store the previous iteration's value
+
+            compute_f(f);  // Compute f(y_guess)
+
+            // Implicit Euler update: y_guess = y_n + dt * f(y_guess)
+            y = yold + dt * f;  
+
+            // Compute error (max norm for stability check)
+            error = (abs(y - yold)).max();  
+
+            iteration++;
+        }
+
+        if (iteration >= maxit) {
+            cout << "WARNING: maximum number of iterations reached, error: " << error << endl;
+        }
+
+        // Accept the converged solution
+        y = y_guess;
+      }
+      else {  
         while(error>tol && iteration<=maxit){
-        	y = yold; // MODIFIER et COMPLETER
+        	yold = y;
+          compute_f(f); 
+          y = yold + dt * (alpha * f + (1 - alpha) * f);
+          error = (abs(y - yold)).max();  
         	iteration += 1;
-	}	
+        }	
         if(iteration>=maxit){
           cout << "WARNING: maximum number of iterations reached, error: " << error << endl;
         }
-      }
-      else
-      {
-        cerr << "alpha not valid" << endl;
-      }
+        else
+        {
+          cerr << "alpha not valid" << endl;
+        }
       cout << iteration << endl;
-  
     }
 
 public:
