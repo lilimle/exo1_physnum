@@ -6,20 +6,19 @@ import os
 
 # Parameters
 # TODO adapt to what you need (folder path executable input filename)
-executable = 'exe.exe'  # Name of the executable (NB: .exe extension is required on Windows)
-repertoire = r"C:/Users/Administrator/physnum/2025/EX1/SOLUTION/"
+executable = 'Exercice1_student.exe'  # Name of the executable (NB: .exe extension is required on Windows)
+repertoire = r"C:/Users/Avril/Desktop/exo1_physnum"
 os.chdir(repertoire)
 
 input_filename = 'configuration.in.example'  # Name of the input file
 
-
 nsteps = np.array([4000, 6000, 10000, 14e3, 20e3]) # TODO change
+//nsteps = np.array([4000, 40000])  # Number of time steps to scan
 nsimul = len(nsteps)  # Number of simulations to perform
 
 tfin = 259200  # TODO: Verify that the value of tfin is EXACTLY the same as in the input file
 
 dt = tfin / nsteps
-
 
 paramstr = 'nsteps'  # Parameter name to scan
 param = nsteps  # Parameter values to scan

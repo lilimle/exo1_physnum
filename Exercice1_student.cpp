@@ -68,7 +68,7 @@ double dist_s_l;     // Distance satellite-Lune
 
     void compute_f(valarray<double>& f) //  TODO: Calcule le tableau de fonctions f(y)
     {
-      f[0]      = -G_grav*(mt/(pow(dist_s_t,3))*(y[2]-xt) + ml/(dist_s_l**3)*(y[2]-xl)) + 2*Om*y[1] + Om*Om*y[2];
+      f[0]      = -G_grav*(mt/(pow(dist_s_t,3))*(y[2]-xt) + ml/(pow(dist_s_l,3))*(y[2]-xl)) + 2*Om*y[1] + Om*Om*y[2];
       f[1]      = -G_grav*(y[3])*(mt/(pow(dist_s_t,3) + ml/pow(dist_s_l,3))) + 2*Om*y[0] + Om*Om*y[3];;
       f[2]      = y[0]; 
       f[3]      = y[1]; 
@@ -81,7 +81,7 @@ double dist_s_l;     // Distance satellite-Lune
       double error=999e0;
       valarray<double> f =valarray<double>(0.e0,4); 
       valarray<double> yold=valarray<double>(y);
-      valarray<double> y_control=valarray<double>(y);
+      valarray<double> y_control=valarray<double>(y); // !!! pour determiner l'ordre de convergence de troncature? comment def? stabilite? solution exacte calculee avec approx ms<< ? 
       valarray<double> delta_y_EE=valarray<double>(y);
 
       //TODO : écrire un algorithme valide pour chaque alpha dans [0,1]
@@ -90,52 +90,47 @@ double dist_s_l;     // Distance satellite-Lune
 
       if(alpha >= 0. && alpha <= 1.0){
         t += dt;                 //mise à jour du temps 
-        if (alpha == 1.0) {  
-          // Explicit Euler: straightforward computation
+        if (alpha == 1.0) {   // !!! can i use direct equality here?
           compute_f(f);
-          y += dt * f;
-      } 
-      else if (alpha == 0.0) {  
-        // Implicit Euler requires an iterative solution
-        while (error > tol && iteration <= maxit) {
-            yold = y;  // Store the previous iteration's value
+          y += dt * f; 
+        } 
+        else if (alpha == 0.0) {  
+          // Implicit Euler requires an iterative solution
+          while (error > tol && iteration <= maxit) {
+              yold = y;  // Store the previous iteration's value
 
-            compute_f(f);  // Compute f(y_guess)
+              compute_f(f);  // Compute f(y_guess)
 
-            // Implicit Euler update: y_guess = y_n + dt * f(y_guess)
-            y = yold + dt * f;  
+              // Implicit Euler update: y_guess = y_n + dt * f(y_guess)
+              y = yold + dt * f;  
 
-            // Compute error (max norm for stability check)
+              // Compute error (max norm for stability check)
+              error = (abs(y - yold)).max();
+              if (iteration >= maxit) {
+                cout << "WARNING: maximum number of iterations reached, error: " << error << endl;
+              }
+              iteration++;
+          }
+        }
+        else if ((alpha - 0.5) < 1e-10) {
+          while(error>tol && iteration<=maxit){
+            yold = y;
+            compute_f(f); 
+            y = yold + dt * (alpha * f + (1 - alpha) * f);
             error = (abs(y - yold)).max();  
-
             iteration++;
+            if (iteration >= maxit) {
+              cout << "WARNING: maximum number of iterations reached, error: " << error << endl;
+            }  
+          }	
         }
-
-        if (iteration >= maxit) {
-            cout << "WARNING: maximum number of iterations reached, error: " << error << endl;
-        }
-
-        // Accept the converged solution
-        y = y_guess;
+      else {
+        cerr << "alpha not valid" << endl;
       }
-      else {  
-        while(error>tol && iteration<=maxit){
-        	yold = y;
-          compute_f(f); 
-          y = yold + dt * (alpha * f + (1 - alpha) * f);
-          error = (abs(y - yold)).max();  
-        	iteration += 1;
-        }	
-        if(iteration>=maxit){
-          cout << "WARNING: maximum number of iterations reached, error: " << error << endl;
-        }
-        else
-        {
-          cerr << "alpha not valid" << endl;
-        }
       cout << iteration << endl;
     }
-
+  }
+  
 public:
     // Modified constructor
     Engine(ConfigFile configFile)
@@ -193,10 +188,9 @@ public:
         printOut(false); // ecrire le pas de temps actuel
       }
       printOut(true); // ecrire le dernier pas de temps
+      };
+  };
 
-    };
-   
-};
 
 // programme
 int main(int argc, char* argv[])
